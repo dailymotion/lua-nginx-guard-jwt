@@ -2,7 +2,7 @@ local ngx = require "ngx"
 local cjson = require "cjson"
 local jwt = require "resty.jwt"
 
-local _M = { _VERSION = '0.3' }
+local _M = { _VERSION = '0.4' }
 
 local GuardJWT = {}
 _M.GuardJWT = GuardJWT
