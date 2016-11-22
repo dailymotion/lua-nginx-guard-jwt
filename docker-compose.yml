@@ -1,0 +1,26 @@
+version: '2'
+services:
+  develop:
+    build: example/develop
+    environment:
+      - JWT_SECRET=lua-resty-jwt
+    ports:
+      - 8080:80
+    depends_on:
+      - target
+
+  gateway:
+    build: example/gateway
+    ports:
+      - 8080:80
+    depends_on:
+      - target
+
+  target:
+    build: example/target/
+    ports:
+      - 80
+
+networks:
+  default:
+    driver: bridge
