@@ -8,6 +8,13 @@ local GuardJWT = {}
 _M.GuardJWT = GuardJWT
 
 
+function _tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+
 --@function Get claims values from a authorization value (private method)
 --@param nginx NGINX object
 --@param authorization Value from header "authorization"
@@ -57,13 +64,13 @@ end
 -- variable if not present
 function GuardJWT.raw_auth(nginx, claims_to_headers_mapping, is_token_mandatory, secret)
     assert(type(claims_to_headers_mapping) == 'table', "[JWTGuard] claims_to_headers_mapping is mandatory")
-    assert(#claims_to_headers_mapping <= 0, "[JWTGuard] claims_to_headers_mapping should not be empty")
+    assert(_tablelength(claims_to_headers_mapping) > 0, "[JWTGuard] claims_to_headers_mapping should not be empty")
 
     _purge_headers(nginx, claims_to_headers_mapping)
 
     local claims = _get_claims(nginx, nginx.req.get_headers()["authorization"], secret)
 
-    if is_token_mandatory and type(claims) ~= 'table' and #claims <= 0 then
+    if is_token_mandatory and (type(claims) ~= 'table' or _tablelength(claims) <= 0) then
         nginx.log(nginx.ERR, "[JWTGuard] No Authorization provided")
         return nginx.exit(nginx.HTTP_UNAUTHORIZED)
     end
