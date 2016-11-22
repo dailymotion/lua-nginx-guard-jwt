@@ -1,2 +1,5 @@
 example/develop/lib
 example/target/node_modules
+tools/.opmrc
+lua-nginx-guard-jwt-*
+lua-nginx-guard-jwt-*.tar.gz
