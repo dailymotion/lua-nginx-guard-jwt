@@ -2,7 +2,7 @@ local ngx = require "ngx"
 local cjson = require "cjson"
 local jwt = require "resty.jwt"
 
-local _M = { _VERSION = '0.5' }
+local _M = { _VERSION = '0.5.1' }
 
 local GuardJWT = {}
 _M.GuardJWT = GuardJWT
@@ -69,6 +69,11 @@ function GuardJWT.raw_auth(nginx, claims_to_headers_mapping, is_token_mandatory,
     _purge_headers(nginx, claims_to_headers_mapping)
 
     local claims = _get_claims(nginx, nginx.req.get_headers()["authorization"], secret)
+
+    if claims == nil then
+      nginx.log(nginx.DEBUG, "[JWTGuard] No JWT provided")
+      return
+    end
 
     if is_token_mandatory and (type(claims) ~= 'table' or _tablelength(claims) <= 0) then
         nginx.log(nginx.ERR, "[JWTGuard] No Authorization provided")
