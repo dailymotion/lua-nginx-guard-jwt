@@ -1,0 +1,9 @@
+sudo: required
+services:
+  - docker
+language: lua
+deploy:
+  provider: script
+  script: make opm-upload
+  on:
+    branch: master
