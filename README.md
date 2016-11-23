@@ -60,3 +60,35 @@ Under the hood, this library uses:
 * cjson
 
 [Back to TOC](#table-of-contents)
+
+Example: Gateway
+================
+
+You can try the `guardjwt` module through the Gateway example _(./example/gateway)_.
+
+```bash
+# Run the target container (Where the traffic will be proxify)
+docker-compose up target
+
+# Run the gateway
+docker-compose up gateway
+```
+
+When both containers are ready, you can send an HTTP Request to the gateway with a
+JWT Token.
+
+```bash
+curl --header 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmb28iOiJiYXIifQ.CJRON1D28gXmufyx-Z7Erm_hvx480yhw5KwFrZkfKoM' http://localhost:8080/
+```
+
+You can see the HTTP Request proxify on the target log, with the decoded
+headers.
+
+```
+target_1   | http GET /
+target_1   | host: target
+target_1   | connection: close
+target_1   | user-agent: curl/7.47.1
+target_1   | accept: */*
+target_1   | x-dm-foo: bar
+```
