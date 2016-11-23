@@ -92,3 +92,20 @@ target_1   | user-agent: curl/7.47.1
 target_1   | accept: */*
 target_1   | x-dm-foo: bar
 ```
+
+Example: How to develop on GuardJWT ?
+=====================================
+
+As the method describe above, you have to start the target container first. It
+will be used to handle proxify request. You should take a look of the logs to
+debug the `guardjwt` module.
+
+```bash
+docker-compose up target
+```
+
+To develop, just update the file _(./lib/guardjwt.lua)_ and execute this commands.
+
+```bash
+make develop-run
+```
