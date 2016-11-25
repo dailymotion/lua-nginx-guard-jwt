@@ -1,4 +1,5 @@
-Nginx Guard - Map JWT Claims to HTTP's headers request
+Nginx Guard - Verification of the JWT Token with mapping of the token claims
+values to the HTTP Headers of Query.
 ====
 
 Map claims values from the JWT Token to the HTTP Headers request, with
