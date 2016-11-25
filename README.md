@@ -14,6 +14,8 @@ Table of Contents
 
 * [Synopsis](#synopsis)
 * [Description](#description)
+* [Example: Gateway](#example-gateway)
+* [Example: How to develop on GuardJWT ?](#example-how-to-develop-on-guardjwt-)
 
 Synopsis
 ========
