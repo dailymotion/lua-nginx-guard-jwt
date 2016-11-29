@@ -1,5 +1,5 @@
-Nginx Guard - Verification of the JWT Token with mapping of the token claims values to the HTTP Headers of Query.
-=================================================================================================================
+Nginx Guard - Verification of the JWT Token with mapping of the token claims values to the HTTP Headers
+=======================================================================================================
 
 **This library is under development, it is not ready for production use yet.**
 
@@ -16,7 +16,7 @@ Table of Contents
 
 * [Synopsis](#synopsis)
 * [Description](#description)
-* [API - Methods](#api-methods)
+* [API - Methods](#api---methods)
     * [verify_and_map](#verify_and_map)
     * [raw_verify_and_map](#raw_verify_and_map)
 * [Example: Gateway](#example-gateway)
