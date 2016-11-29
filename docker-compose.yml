@@ -3,7 +3,7 @@ services:
   develop:
     build: example/develop
     environment:
-      - JWT_SECRET=lua-resty-jwt
+      - JWT_SECRET=guardjwt
     ports:
       - 8080:80
     depends_on:
