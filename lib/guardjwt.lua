@@ -1,8 +1,7 @@
 local ngx = require "ngx"
-local cjson = require "cjson"
 local jwt = require "resty.jwt"
 
-local _M = { _VERSION = '0.5.2' }
+local _M = { _VERSION = '0.6.0' }
 
 local GuardJWT = {}
 _M.GuardJWT = GuardJWT
@@ -15,102 +14,152 @@ function _tablelength(T)
 end
 
 
---@function Get claims values from a authorization value (private method)
+--@function Purge HTTP Request's headers mapped with the claim's values to
+-- avoid header's injections (private method)
 --@param nginx NGINX object
---@param authorization Value from header "authorization"
+--@param claim_spec Mapping between claim's values and headers
+function _purge_headers(nginx, claim_spec)
+  for _, claim_conf in pairs(claim_spec) do
+    if claim_conf.header ~= nil then
+      nginx.req.clear_header(string.lower(claim_conf.header))
+    end
+  end
+end
+
+
+--@function Get claim values from an authorization value (private method)
+--@param nginx NGINX object
+--@param claim_spec Claim's spec (Claim config, validators & header name)
 --@param secret Secret key to decrypt JWT Token
---@return Claims values (Available in the token's "payload" key)
-function _get_claims(nginx, authorization, secret)
+--@param authorization Value from header "authorization"
+--@return Claim values (Available in the token's "payload" key)
+function _guess_claim(nginx, claim_spec, secret, authorization)
   if authorization == nil then
-      nginx.log(nginx.NOTICE, "[JWTGuard] No authorization header")
-      return nil
+    nginx.log(nginx.NOTICE, "[JWTGuard] No authorization header")
+    return nil
   end
 
   local _, _, token = string.find(authorization, "Bearer%s+(.+)")
 
   if token == nil then
-      nginx.log(nginx.NOTICE, "[JWTGuard] Token is missing")
-      return nil
+    nginx.log(nginx.NOTICE, "[JWTGuard] Token is missing")
+    return nil
   end
 
-  local decoded_jwt = jwt:verify(secret, token)
+  local jwt_claim_spec = {}
+  for claim_key, claim_conf in pairs(claim_spec) do
+    if claim_conf.validators ~= nil then
+      jwt_claim_spec[claim_key] = claim_conf.validators
+    end
+  end
+
+  local decoded_jwt = jwt:verify(secret, token, jwt_claim_spec)
   if decoded_jwt.verified == false then
-      nginx.log(nginx.NOTICE, "[JWTGuard] JWT is not verified, reason: " .. decoded_jwt.reason)
-      return nil
+    nginx.log(
+      nginx.NOTICE,
+      "[JWTGuard] JWT is not verified, reason: " .. decoded_jwt.reason
+    )
+    return nginx.exit(nginx.HTTP_UNAUTHORIZED)
   end
 
   return decoded_jwt['payload']
 end
 
 
---@function Purge HTTP Request's headers mapped with the claims's values to
--- avoid header's injections (private method)
+--@function Raw method to verify guest from the Authorization header then map
+-- the claim values to the associated header. nginx object is guessed from the
+-- global scope
+--@param claim_spec Claim's spec (Claim config, validators & header name)
+--   {
+--     foo: {
+--       validators: [resty.jwt-validators] validator.
+--       header: [optional] Header name used to map the claim value.
+--     },
+--     bar: {
+--       validators: [resty.jwt-validators] validator.
+--       header: [optional] Header name used to map the claim value.
+--     },
+--   }
+--@param cfg GuardJWT Configuration (Secret + Is token mandatory)
+-- Format of cfg record:
+--   {
+--     secret: [string] which describe private key to decode JWT,
+--     is_token_mandatory: [bool] is token is mandatory & valid.
+--   }
+function GuardJWT.verify_and_map(claim_spec, cfg)
+  GuardJWT.raw_verify_and_map(ngx, claim_spec, cfg)
+end
+
+
+--@function Raw method to verify guest from the Authorization header then map
+-- the claim values to the associated header.
 --@param nginx NGINX object
---@param claims_to_headers_mapping Mapping between claims's values and headers
-function _purge_headers(nginx, claims_to_headers_mapping)
-  for _, claim_conf in pairs(claims_to_headers_mapping) do
-    nginx.req.clear_header(string.lower(claim_conf.header))
+--@param claim_spec Claim's spec (Claim config, validators & header name)
+--   {
+--     foo: {
+--       validators: [resty.jwt-validators] validator.
+--       header: [optional] Header name used to map the claim value.
+--     },
+--     bar: {
+--       validators: [resty.jwt-validators] validator.
+--       header: [optional] Header name used to map the claim value.
+--     },
+--   }
+--@param cfg GuardJWT Configuration (Secret + Is token mandatory)
+-- Format of cfg record:
+--   {
+--     secret: [string] which describe private key to decode JWT,
+--     is_token_mandatory: [bool] is token is mandatory & valid.
+--   }
+function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
+  assert(type(claim_spec) == 'table', "[JWTGuard] claim_spec is mandatory")
+  assert(
+    _tablelength(claim_spec) > 0,
+    "[JWTGuard] claim_spec should not be empty"
+  )
+
+  if type(cfg) ~= 'table' then
+    cfg = {}
   end
-end
 
+  if cfg.secret == nil then
+    cfg['secret'] = os.getenv("JWT_SECRET")
+  end
 
---@function Raw method to authenticate guest from the Authorization header.
---@param nginx NGINX object
---@param claims_to_headers_mapping Mapping configuration between claim's values
--- and HTTP Request's headers
---@param is_token_mandatory Set if JWT token must be valid et present,
--- false by default
---@param secret Secret used to decrypt JWT Token guess from JWT_SECRET env
--- variable if not present
-function GuardJWT.raw_auth(nginx, claims_to_headers_mapping, is_token_mandatory, secret)
-    assert(type(claims_to_headers_mapping) == 'table', "[JWTGuard] claims_to_headers_mapping is mandatory")
-    assert(_tablelength(claims_to_headers_mapping) > 0, "[JWTGuard] claims_to_headers_mapping should not be empty")
+  if cfg.is_token_mandatory == nil then
+    cfg['is_token_mandatory'] = false
+  end
 
-    _purge_headers(nginx, claims_to_headers_mapping)
+  _purge_headers(nginx, claim_spec)
 
-    local claims = _get_claims(nginx, nginx.req.get_headers()["authorization"], secret)
+  local claim = _guess_claim(
+    nginx,
+    claim_spec,
+    cfg.secret,
+    nginx.req.get_headers()["authorization"]
+  )
 
-    if claims == nil then
-      nginx.log(nginx.DEBUG, "[JWTGuard] No JWT provided")
-      return
+  if cfg.is_token_mandatory == false and claim == nil then
+    nginx.log(nginx.DEBUG, "[JWTGuard] No JWT provided")
+    return
+  end
+
+  if cfg.is_token_mandatory and (type(claim) ~= 'table' or _tablelength(claim) <= 0) then
+    nginx.log(nginx.ERR, "[JWTGuard] No Authorization provided")
+    return nginx.exit(nginx.HTTP_UNAUTHORIZED)
+  end
+
+  for claim_key, claim_conf in pairs(claim_spec) do
+    claim_value = claim[claim_key]
+
+    if claim_value ~= nil and claim_conf.header ~= nil then
+      nginx.log(nginx.DEBUG, "[JWTGuard] Add Claim '" .. claim_value .. "' to header '" .. claim_conf.header .. "'")
+      nginx.req.set_header(claim_conf.header, claim_value)
+      nginx.req.clear_header("authorization")
     end
+  end
 
-    if is_token_mandatory and (type(claims) ~= 'table' or _tablelength(claims) <= 0) then
-        nginx.log(nginx.ERR, "[JWTGuard] No Authorization provided")
-        return nginx.exit(nginx.HTTP_UNAUTHORIZED)
-    end
-
-    for claim_key, claim_conf in pairs(claims_to_headers_mapping) do
-        claim_value = claims[claim_key]
-
-        if claim_conf.mandatory and claim_value == nil then
-          nginx.log(nginx.ERR, "[JWTGuard] Claim '" .. claim_key .. "' is not present into the JWT Token, it must be.")
-          return nginx.exit(nginx.HTTP_UNAUTHORIZED)
-        end
-
-        if claim_value ~= nil then
-          nginx.log(nginx.DEBUG, "Add Claim '" .. claim_value .. "' to header '" .. claim_conf.header .. "'")
-          nginx.req.set_header(claim_conf.header, claim_value)
-          nginx.req.clear_header("authorization")
-        end
-    end
-end
-
-
---@function Method to authenticate guest from the Authorization header.
--- nginx object if guessed from the global scope
---@param claims_to_headers_mapping Mapping configuration between claim's values
--- and HTTP Request's headers
---@param is_token_mandatory Set if JWT token must be valid et present,
--- false by default
---@param secret Secret used to decrypt JWT Token, guessed from JWT_SECRET env
--- variable if not present
-function GuardJWT.auth(claims_to_headers_mapping, is_token_mandatory, secret)
-    if secret == nil then
-      secret = os.getenv("JWT_SECRET")
-    end
-
-    GuardJWT.raw_auth(ngx, claims_to_headers_mapping, is_token_mandatory, secret)
+  return claim
 end
 
 return _M
