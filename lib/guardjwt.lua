@@ -1,7 +1,7 @@
 local ngx = require "ngx"
 local jwt = require "resty.jwt"
 
-local _M = { _VERSION = '0.6.0' }
+local _M = { _VERSION = '0.7.0' }
 
 local GuardJWT = {}
 _M.GuardJWT = GuardJWT
@@ -84,7 +84,8 @@ end
 -- Format of cfg record:
 --   {
 --     secret: [string] which describe private key to decode JWT,
---     is_token_mandatory: [bool] is token is mandatory & valid.
+--     is_token_mandatory: [bool] is token is mandatory & valid,
+--     clear_authorization_header: [bool] Clear "Authorization" header
 --   }
 function GuardJWT.verify_and_map(claim_spec, cfg)
   GuardJWT.raw_verify_and_map(ngx, claim_spec, cfg)
@@ -110,6 +111,7 @@ end
 --   {
 --     secret: [string] which describe private key to decode JWT,
 --     is_token_mandatory: [bool] is token is mandatory & valid.
+--     clear_authorization_header: [bool] Clear "Authorization" header
 --   }
 function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
   assert(type(claim_spec) == 'table', "[JWTGuard] claim_spec is mandatory")
@@ -128,6 +130,10 @@ function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
 
   if cfg.is_token_mandatory == nil then
     cfg['is_token_mandatory'] = false
+  end
+
+  if cfg.clear_authorization_header == nil then
+    cfg['clear_authorization_header'] = true
   end
 
   _purge_headers(nginx, claim_spec)
@@ -155,8 +161,11 @@ function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
     if claim_value ~= nil and claim_conf.header ~= nil then
       nginx.log(nginx.DEBUG, "[JWTGuard] Add Claim '" .. claim_value .. "' to header '" .. claim_conf.header .. "'")
       nginx.req.set_header(claim_conf.header, claim_value)
-      nginx.req.clear_header("authorization")
     end
+  end
+
+  if cfg.clear_authorization_header then
+    nginx.req.clear_header("authorization")
   end
 
   return claim

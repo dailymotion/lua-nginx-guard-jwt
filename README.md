@@ -119,12 +119,14 @@ Validators documentation is available directly on the [SkyLothar repository](htt
 {
   secret: [string] which describe private key to decode JWT,
   is_token_mandatory: [bool][default=false] is token is mandatory & valid.
+  clear_authorization_header: [bool][default=true] Clear "Authorization" header
 }
 ```
 
 `secret`: Private key to decode JWT, if not present, the value is guessed from
 the JWT_SECRET environment variable.
 `is_token_mandatory`: Is token is mandatory & valid, false by default.
+`clear_authorization_header`: Clear the "Authorization" header, true by default.
 
 **example**
 
@@ -141,7 +143,8 @@ j.GuardJWT.verify_and_map(
   },
   {
     secret = "guardjwt",
-    is_token_mandatory = true
+    is_token_mandatory = true,
+    clear_authorization_header = true
   }
 )
 ```
