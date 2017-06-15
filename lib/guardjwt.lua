@@ -1,7 +1,7 @@
 local ngx = require "ngx"
 local jwt = require "resty.jwt"
 
-local _M = { _VERSION = '0.7.0' }
+local _M = { _VERSION = '0.7.1' }
 
 local GuardJWT = {}
 _M.GuardJWT = GuardJWT
@@ -158,7 +158,7 @@ function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
   for claim_key, claim_conf in pairs(claim_spec) do
     claim_value = claim[claim_key]
 
-    if claim_value ~= nil and claim_conf.header ~= nil then
+    if claim_value ~= nil and type(claim_value) ~= 'userdata' and claim_conf.header ~= nil then
       nginx.log(nginx.DEBUG, "[JWTGuard] Add Claim '" .. claim_value .. "' to header '" .. claim_conf.header .. "'")
       nginx.req.set_header(claim_conf.header, claim_value)
     end
