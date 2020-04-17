@@ -73,7 +73,7 @@ This library implements a simple way to map the claim's values from a JWT Token
 to the HTTP's Headers request.
 
 Under the hood, this library uses:
-* [lua-resty-jwt](https://github.com/SkyLothar/lua-resty-jwt)
+* [lua-resty-jwt](https://github.com/cdbattags/lua-resty-jwt)
 
 [Back to TOC](#table-of-contents)
 
@@ -111,7 +111,7 @@ Then, map claim values with associated header.
 }
 ```
 
-Validators documentation is available directly on the [SkyLothar repository](https://github.com/SkyLothar/lua-resty-jwt#jwt-validators).
+Validators documentation is available directly on the [cdbattags repository](https://github.com/cdbattags/lua-resty-jwt#jwt-validators).
 
 **`config` format**
 

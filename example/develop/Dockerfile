@@ -13,7 +13,7 @@ RUN echo 'export PATH="/usr/local/openresty/bin:$PATH"' >> /root/.bashrc
 
 ENV PATH "/usr/local/openresty/bin:$PATH"
 
-RUN opm get SkyLothar/lua-resty-jwt=0.1.9
+RUN opm get cdbattags/lua-resty-jwt=0.2.0
 
 COPY ./lib /usr/local/openresty/site/lualib
 COPY nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
