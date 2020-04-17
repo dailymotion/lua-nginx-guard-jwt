@@ -7,7 +7,7 @@ local GuardJWT = {}
 _M.GuardJWT = GuardJWT
 
 
-function _tablelength(T)
+local function _tablelength(T)
   local count = 0
   for _ in pairs(T) do count = count + 1 end
   return count
@@ -18,7 +18,7 @@ end
 -- avoid header's injections (private method)
 --@param nginx NGINX object
 --@param claim_spec Mapping between claim's values and headers
-function _purge_headers(nginx, claim_spec)
+local function _purge_headers(nginx, claim_spec)
   for _, claim_conf in pairs(claim_spec) do
     if claim_conf.header ~= nil then
       nginx.req.clear_header(string.lower(claim_conf.header))
@@ -33,7 +33,7 @@ end
 --@param secret Secret key to decrypt JWT Token
 --@param authorization Value from header "authorization"
 --@return Claim values (Available in the token's "payload" key)
-function _guess_claim(nginx, claim_spec, secret, authorization)
+local function _guess_claim(nginx, claim_spec, secret, authorization)
   if authorization == nil then
     nginx.log(nginx.NOTICE, "[JWTGuard] No authorization header")
     return nil
