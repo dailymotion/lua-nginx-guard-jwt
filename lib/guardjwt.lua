@@ -176,7 +176,7 @@ function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
   end
 
   for claim_key, claim_conf in pairs(claim_spec) do
-    claim_value = claim[claim_key]
+    local claim_value = claim[claim_key]
 
     if claim_value ~= nil and type(claim_value) ~= 'userdata' and claim_conf.header ~= nil then
       nginx.log(nginx.DEBUG, "[JWTGuard] Add Claim '" .. claim_value .. "' to header '" .. claim_conf.header .. "'")
