@@ -1,7 +1,7 @@
 local ngx = require "ngx"
 local jwt = require "resty.jwt"
 
-local _M = { _VERSION = '0.7.1' }
+local _M = { _VERSION = '0.7.2' }
 
 local GuardJWT = {}
 _M.GuardJWT = GuardJWT
