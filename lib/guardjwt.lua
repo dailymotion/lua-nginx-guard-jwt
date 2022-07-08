@@ -26,23 +26,44 @@ local function _purge_headers(nginx, claim_spec)
   end
 end
 
-
---@function Get claim values from an authorization value (private method)
+--@function Get jwt token either from HTTP AUTHORIZATION header or from jwt cookie
 --@param nginx NGINX object
---@param claim_spec Claim's spec (Claim config, validators & header name)
---@param secret Secret key to decrypt JWT Token
---@param authorization Value from header "authorization"
---@return Claim values (Available in the token's "payload" key)
-local function _guess_claim(nginx, claim_spec, secret, authorization)
+--@return Token
+local function _get_jwt_token(nginx)
+
+  local authorization = nginx.req.get_headers()["authorization"]
+
   if authorization == nil then
-    nginx.log(nginx.NOTICE, "[JWTGuard] No authorization header")
-    return nil
+    local token = nginx.var.cookie_jwt
+    if token == nil then
+      nginx.log(nginx.NOTICE, "[JWTGuard] No authorization header or jwt cookie")
+      return nil
+    end
+    return token
   end
 
   local _, _, token = string.find(authorization, "Bearer%s+(.+)")
 
   if token == nil then
     nginx.log(nginx.NOTICE, "[JWTGuard] Token is missing")
+    return nil
+  end
+
+  return token
+
+end
+
+
+--@function Get claim values from an authorization value (private method)
+--@param nginx NGINX object
+--@param claim_spec Claim's spec (Claim config, validators & header name)
+--@param secret Secret key to decrypt JWT Token
+--@return Claim values (Available in the token's "payload" key)
+local function _guess_claim(nginx, claim_spec, secret)
+
+  local token = _get_jwt_token(nginx)
+
+  if token == nil then
     return nil
   end
 
@@ -141,8 +162,7 @@ function GuardJWT.raw_verify_and_map(nginx, claim_spec, cfg)
   local claim = _guess_claim(
     nginx,
     claim_spec,
-    cfg.secret,
-    nginx.req.get_headers()["authorization"]
+    cfg.secret
   )
 
   if cfg.is_token_mandatory == false and claim == nil then
